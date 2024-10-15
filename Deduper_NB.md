@@ -207,10 +207,6 @@ SELF NOTES
 
 * I created a new file &  moved all of the psuedocode into psuedocode.md 
 
-
-
-
-
 ________________________
 
 # template stuff 
