@@ -207,6 +207,58 @@ SELF NOTES
 
 * I created a new file &  moved all of the psuedocode into psuedocode.md 
 
+
+____________________________________
+10/15/24
+____________________________________
+# Part 1 – Pseudocode 
+
+### Make test sam files (input & output) 
+"Write examples:
+* Include a properly formatted input sam file (an example sam file is included in the repo for your reference)
+* Include a properly formatted expected output sam file
+* Cover several different cases of things that are and are not PCR duplicates
+* It may be helpful to create a "unit test folder", that contains it's own readme.md describing the test cases in your unit test samfile"
+
+
+* Layout Below 
+
+FILTERED OUT 
+* A & B 
+    * same UMI, CHR, POS, STRAND
+* K & L & M 
+    * same UMI, CHR, POS, STRAND [testing to see if it can filter out more than 2]
+
+* N & P 
+    * same UMI, CHR, STRAND
+    * diff POS, BUT CIGAR STRING HAS a "S" IN IT. DO THE MATH so THAT the POS ends up summing to actually be the same AFTER CONSIDERING SOFT CLIPPING 
+* Q & S 
+    * same UMI, CHR, POS, STRAND
+    * UMI NOT in known UMI list. 
+
+KEPT 
+* C & D
+    * same CHR, POS, STRAND
+    * diff UMI 
+* E & F 
+    * same UMI, POS, STRAND
+    * diff CHR
+* G & H 
+    * same UMI, CHR, STRAND
+    * diff POS
+* I & J 
+    * same UMI, CHR, POS
+    * diff STRAND
+
+
+* Creating Folder to hold unit test files 
+```
+mkdir test_files
+nano test_input.sam
+nano test_output.sam
+nano readme.md 
+```
+
 ________________________
 
 # template stuff 
