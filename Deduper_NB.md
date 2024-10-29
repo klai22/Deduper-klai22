@@ -264,10 +264,50 @@ ____________________________________
 ____________________________________
 * fixed pseudocode.md to account for negative strands in POS calculations (when considering CIGAR string). 
 
+* generating .py script to hold primary deduper code: 
+--> /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/Lai_deduper.py
 
 
 
+[For the documenting memory, you will need to create a bash script that runs a job for the Lai_deduper.py script]
+(be prepared to report the amount of memory (GB) your script required and the time it took to run!)
+* will need to report # of header lines, unique reads, wrong UMIs, & duplicated removed. 
+* will also need to report the # of reads per chrom. in tsv format. 
+* Will run on "/projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam"
 
+
+
+* Updating my .test files to account for (-) CIGAR STRING EXAMPLES 
+
+* Edited the CIGAR string below to be more complex, changed FLAG to be (+) 
+# N & P (same UMI, CHR, STRAND, --> different POS, but CIGAR with soft clipping makes POS the same) AATTCCGG (+)
+N:X:X:1:1:1:1:AATTCCGG  163  chr1    100 60  4S10M   =   400 0 GCAA...GCAA IJKL789
+P:X:X:1:1:1:1:AATTCCGG  163  chr1    99  60  3S5M2D3M6S  =   400 0   GCAA...GCAA IJKL789
+* Added pair below for CIGAR string and (-) FLAG 
+# O & R (same UMI, CHR, STRAND, --> different POS, but CIGAR with soft clipping makes POS the same) CAACTGGT (-) 
+O:X:X:1:1:1:1:CAACTGGT  83 chr1 230 60  2S3M1I5N1D1S    =   200 0   AAGT...GGCG ABCD123
+R:X:X:1:1:1:1:CAACTGGT  83 chr1 228 60  6M7I3D3S    =   200 0   TACG...CCAT ABCD123
+
+
+
+* Re-installing samtools because I don't remember which conda env I put it in. 
+```
+conda create --name bgmp_samtools 
+conda activate bgmp_samtools
+conda install -c bioconda samtools
+samtools --version
+```
+* Sorting my test sam file: 
+```
+cd /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/test_files
+samtools sort -n -o test_input_sorted.sam --output-fmt sam test_input.sam
+
+```
+
+
+
+TO DO: 
+* Create a .sh script that will get metrics such as GB used by Lai_deduper.py & also includes steps like 'samtools sort'-ing the files before hand. 
 ________________________
 
 # template stuff 

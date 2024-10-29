@@ -10,10 +10,12 @@ The Read Name (each assigned a letter) is indicated as the FIRST CHARACTER in th
 |K |L,M |||||Correctly filtering our >2 PCR duplicates that share all 4 categories|Filtered Out|AAGGTACG|
 |L |K,L |||||Correctly filtering our >2 PCR duplicates that share all 4 categories|Filtered Out|AAGGTACG|
 |M |K,M |||||Correctly filtering our >2 PCR duplicates that share all 4 categories|Filtered Out|AAGGTACG|
-|N |P |||X||Technically  PCR duplicates, but have different POS. Should be classified as duplicated once soft-clipping is accounted for. |Filtered Out|AATTCCGG|
-|P |N |||X||Technically  PCR duplicates, but have different POS. Should be classified as duplicated once soft-clipping is accounted for. |Filtered Out|AATTCCGG|
+|N |P |||X||Technically  PCR duplicates, but have different POS. Should be classified as duplicated once soft-clipping is accounted for. Positive Strand (impacts CIGAR position calc.) FLAG of 163 codes for a (+) strand.|Filtered Out|AATTCCGG|
+|P |N |||X||Technically  PCR duplicates, but have different POS. Should be classified as duplicated once soft-clipping is accounted for. Positive Strand (impacts CIGAR position calc.) FLAG of 163 codes for a (+) strand.|Filtered Out|AATTCCGG|
 |Q |S |||||Succesfully filter out reads w/ invalid UMIs (UMI not detected in known UMI list)|Filtered Out|NA|
 |S |Q |||||Succesfully filter out reads w/ invalid UMIs (UMI not detected in known UMI list)|Filtered Out|NA|
+|O |R |||X||Technically PCR duplicates, but have different POS. Should be classified as duplicated once CIGAR STRING is accounted for. Negative Strand (impacts CIGAR position calc.) FLAG of 83 codes for a (-) strand. |Filtered Out|CAACTGGT|
+|R |O |||X||Technically PCR duplicates, but have different POS. Should be classified as duplicated once CIGAR STRING is accounted for. Negative Strand (impacts CIGAR position calc.) FLAG of 83 codes for a (-) strand.|Filtered Out|CAACTGGT|
 |C |D |X||||Correctly identifies non-PCR duplicates (different UMIs)|Kept|ACACAGAG|
 |D |C |X||||Correctly identifies non-PCR duplicates (different UMIs)|Kept|TTCGTTCG|
 |E |F ||X|||Correctly identifies non-PCR duplicates (different CHROMs)|Kept|ACACTCAG|

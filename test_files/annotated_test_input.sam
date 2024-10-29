@@ -32,13 +32,17 @@ K:X:X:1:1:1:1:AAGGTACG  99  chr2    150 60  100M    =   250 0   TCGT...TCGT EFGH
 L:X:X:1:1:1:1:AAGGTACG  99  chr2    150 60  100M    =   250 0   TCGT...TCGT EFGH456
 M:X:X:1:1:1:1:AAGGTACG  99  chr2    150 60  100M    =   250 0   TCGT...TCGT EFGH456
 
-# N & P (same UMI, CHR, STRAND, --> different POS, but CIGAR with soft clipping makes POS the same) AATTCCGG
-N:X:X:1:1:1:1:AATTCCGG  99  chr1    111 60  14M = 400 0 GCAA...GCAA IJKL789
-P:X:X:1:1:1:1:AATTCCGG  99  chr1    113 60  2S12M   =   400 0   GCAA...GCAA IJKL789
+# N & P (same UMI, CHR, STRAND, --> different POS, but CIGAR with soft clipping makes POS the same) AATTCCGG (+)
+N:X:X:1:1:1:1:AATTCCGG  163  chr1    100 60  4S10M   =   400 0 GCAA...GCAA IJKL789
+P:X:X:1:1:1:1:AATTCCGG  163  chr1    99  60  3S5M2D3M6S  =   400 0   GCAA...GCAA IJKL789
 
 # Q & S (same UMI, CHR, STRAND, --> UMI NOT IN KNOWN LIST / NOT VALID ) NA
 Q:X:X:1:1:1:1:TCTGATCCG  99 chr1 100 60  100M    =   200 0   CTGG...GGGG ABCD123
 S:X:X:1:1:1:1:TCTGATCCG  99 chr1  100 60 100M    =   200 0   CTGG...GGGG ABCD123
+
+# O & R (same UMI, CHR, STRAND, --> different POS, but CIGAR with soft clipping makes POS the same) CAACTGGT (-) 
+O:X:X:1:1:1:1:CAACTGGT  83 chr1 230 60  2S3M1I5N1D1S    =   200 0   AAGT...GGCG ABCD123
+R:X:X:1:1:1:1:CAACTGGT  83 chr1 228 60  6M7I3D3S    =   200 0   TACG...CCAT ABCD123
 
 # KEPT
 # C & D (same CHR, POS, STRAND, different UMI)ACACAGAG & TTCGTTCG
