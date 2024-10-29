@@ -259,6 +259,15 @@ nano test_output.sam
 nano readme.md 
 ```
 
+____________________________________
+10/28/24 -  P.3 -Deduper Code 
+____________________________________
+* fixed pseudocode.md to account for negative strands in POS calculations (when considering CIGAR string). 
+
+
+
+
+
 ________________________
 
 # template stuff 

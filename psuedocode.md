@@ -22,13 +22,7 @@ BI624: Deduper Part 1 - Pseudocode
             - QNAME = col1
             - UMI = everything after last ":" of QNAME string
             - High-lvl Fxn: **extract_umi()**
-        II. Extract CIGAR string
-            - CIGAR = col6 
-        III. Calc. (true) ~POS~ so that it adjusts for soft-clipping (according to CIGAR string) 
-            - Extract POS 
-                - POS = col4 (set # = to a temp. variable)
-            - IF CIGAR string (from ii) has an 'S' near the start (ex: 2S12M), SUBTRACT the # in front of the 'S' (2) from initial 'POS' #. 
-        IV. Extract ~STRAND~ (rev_comp = TRUE [-]or FALSE[+])
+        II. Extract ~STRAND~ (rev_comp = TRUE [-]or FALSE[+])
             - extract ~FLAG~ = col2
             - High-lvl Fxn: **extract_strand()**
                 - convert ~FLAG~ value --> convert to integer (binary)
@@ -37,6 +31,16 @@ BI624: Deduper Part 1 - Pseudocode
                     - if there is 'rev_comp', set ~strand~ = "-"
                     - else, set ~strand~ = "+"
                 - set output of **extract_strand()** = ~STRAND~ 
+        III. Extract CIGAR string
+            - CIGAR = col6 
+        IV. Calc. (true) ~POS~ so that it adjusts for soft-clipping (according to CIGAR string) 
+            - High-lvl Fxn: **calc_pos()**
+            - Extract POS 
+                - POS = col4 (set # = to a temp. variable)
+            - IF [+] 
+                - IF CIGAR string (from ii) has an 'S' near the start (ex: 2S12M), SUBTRACT the # in front of the 'S' (2) from initial 'POS' #. 
+            - IF [-] 
+                - ADD M,D,N,&(right-most ONLY)S to initial 'POS'#. 
         V. Extract ~CHROM~ 
             - RNAME = col3 (RNAME)
 
@@ -146,6 +150,24 @@ def Dedup_SAM(input: str, output: str,known_umis: set):
     This function has no return value, but instead writes contents into the output SAM file. 
     '''
 
+**calc_pos()**
+
+def calc_pos(POS: int,STRAND: str, CIGAR: str)-> int: 
+    
+    '''
+    Calculates the "true POS" considering CIGAR string & strandedness. 
+
+    REQUIRES NA (no extra fxns from bioinfo.py module needed)
+
+    Input:
+        POS (int) - starting pos. of read (factoring in calc. for soft-clipping!)
+        STRAND (str) - output of extract_strand()
+        CIGAR (str) - CIGAR string (ex:5S10M2I3D) 
+    Output:
+	    Updated_POS (int) - True position # (shared b/w true PCR duplicates) calc. by considering factors like soft-clipping in the CIGAR string 
+    Returns an integer of what the updated POS should be. THIS will be stored in the tuples/keys. 
+    '''
+
 
 #### Test Examples 
 **extract_umi**
@@ -187,3 +209,9 @@ populate_key("TGAGTGAG",52159545, "+", 2)
 Dedup_SAM("test.sam","test_output.sam","STL96.txt")
 ```
 * Output: NA. However, "test_output.sam" should show results indicating that PCR duplicates were correctly filtered out by function. 
+
+**calc_pos()**
+```
+calc_pos(3,"-","5S10M2I3D")
+```
+* Output: 16 (bc 3+13(10M+3D)=16)
