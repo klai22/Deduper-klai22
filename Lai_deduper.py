@@ -2,7 +2,7 @@
 
 #./sam_parse.py -sam_file ___
 
-#./Lai_deduper.py -f "test_files/test_input.sam" -o "empty.sam" -u "STL96.txt"
+#./Lai_deduper.py -f "test_files/test_input_sorted.sam" -o1 "filtered_sorted.sam" -o2 "PCR_dups.tsv" -o3 "removed_reads.tsv" -u "STL96.txt"
 
 # MANAGING INPUTS 
 #setting get_args 
@@ -11,14 +11,18 @@ import argparse
 def get_args():
     parser = argparse.ArgumentParser(description="Deduper script to remove PCR duplicates from a SAM file. This code assumes (1) a sorted sam file & (2) single-end reads only/ not paired-end")
     parser.add_argument("-f", required=True, help="Absolute path to INPUT sorted .sam (pre-dedup.)") 
-    parser.add_argument("-o", required=True, help="Absolute path to OUTPUT sorted .sam (post-dedup.)") 
+    parser.add_argument("-o1", required=True, help="Absolute path to OUTPUT sorted .sam (post-dedup.)")
+    parser.add_argument("-o2", required=True, help="Absolute path to OUTPUT aligned reads that were identified as PCR Duplicates")
+    parser.add_argument("-o3", required=True, help="Absolute path to OUTPUT aligned reads that were removed for reasons besides PCR duplication (such as invalid UMIs)")    
     parser.add_argument("-u", required=True, help="Absolute path to .txt of known UMIs")
     return parser.parse_args()
 
 #setting input args--> variables 
 args=get_args()
 input_sam_file=args.f
-output_sam_file=args.o
+output_sam_file=args.o1
+PCR_duplicates_file=args.o2
+removed_reads_file=args.o3
 known_umis_file=args.u
 
 #Importing modules
@@ -150,52 +154,46 @@ Returns an integer of what the updated POS should be. THIS will be stored in the
 # DEDUP CODE 
 
 # 1. Specify input arguments (input SAM file [sorted, mapped reads only], output SAM file) 
+    #Completed Earlier 
 # 2. Create empty **set** to store  *unique* read "keys" (UMI,POS,CHROM,Strand)
 #open the known umis file 
 with open(known_umis_file,"r") as file:
     # strip /n for every line in file, turn all into a set 
     known_umis = set(line.strip() for line in file)
-# 3. Open input SAM file (reading)
-# 4. Open output SAM file (writing) 
-# 5. Iterate through EACH LINE of SAM file (to avoid loading everything into mem.)
-#         - '~_~' indicates a temp_variable has been created to hold value for current line 
+# 3. Open input SAM file (reading) & # 4. Open output SAM file (writing) 
+with open (input_sam_file,"r") as input_sam, open(output_sam_file, "w") as output_sam, open(PCR_duplicates_file, "w") as PCR_dups, open(removed_reads_file, "W") as removed_reads: 
+    # 5. Iterate through EACH LINE of SAM file (to avoid loading everything into mem.)
+        #- '~_~' indicates a temp_variable has been created to hold value for current line 
+    for line in input_sam:
+        #a. If ~line~ = header line (starts w/ '@'), write to ouput SAM file. 
+        if line.startswith("@"):
+            output_sam.write(line)
+            continue #skips to next line, going back to start of for loop 
+        #b. If ~line~ = read line:
+    #Extracting ingredients for read's unique key 
+        #breaking up line (fields) into multiple accessible components - tab-delimited 
+        fields = line.strip().split("/t")
+        QNAME = fields[0]
+        FLAG = int(fields[1])
+        CHR = int(fields[2])
+        POS = int(fields[3])
+        CIGAR = fields[5]
+        #I. Extract ~UMI~ from QNAME column. (set # = to a temp. variable)
+        UMI=extract_umi(QNAME)
+        #II. Extract ~STRAND~ (rev_comp = TRUE [-]or FALSE[+])
+        STRAND=extract_strand(FLAG)
+        #III. Extract CIGAR string & IV. Calc. (true) ~POS~ so that it adjusts for soft-clipping & other elements (according to CIGAR string) 
+        NEW_POS = calc_pos(POS, STRAND, CIGAR)
+        #V. Extract ~CHROM~ 
+            #Completed Earlier
+    #Populating set with unique keys only (& writing only unique reads to output SAM file)
+        #VI. Check if UMI is valid
+        if validate_umi(UMI, known_umis)==False:
+            removed_reads.write(line) #write invalid umis into removed_reads file (read that were removed that weren't PCR duplicates)
+            continue #move to next read line, going back to for loop again 
+        # DONT NEED 'elif validate_umi(UMI, known_umis)==True:', script will know to proceed directly to next steps 
 
-#     a. If ~line~ = header line (starts w/ '@'), write to ouput SAM file. 
-    
-#     b. If ~line~ = read line:
 
-#         * Extracting ingredients for read's unique key 
-#         I. Extract ~UMI~ from QNAME column. (set # = to a temp. variable) 
-#             - QNAME = col1
-#             - UMI = everything after last ":" of QNAME string
-#             - High-lvl Fxn: **extract_umi()**
-#         II. Extract ~STRAND~ (rev_comp = TRUE [-]or FALSE[+])
-#             - extract ~FLAG~ = col2
-#             - High-lvl Fxn: **extract_strand()**
-#                 - convert ~FLAG~ value --> convert to integer (binary)
-#                 - Determine if read is on reverse strand: 
-#                     - isolate 4th bit (16 / 0x10) of converted~FLAG~ 
-#                     - if there is 'rev_comp', set ~strand~ = "-"
-#                     - else, set ~strand~ = "+"
-#                 - set output of **extract_strand()** = ~STRAND~ 
-#         III. Extract CIGAR string
-#             - CIGAR = col6 
-#         IV. Calc. (true) ~POS~ so that it adjusts for soft-clipping (according to CIGAR string) 
-#             - High-lvl Fxn: **calc_pos()**
-#             - Extract POS 
-#                 - POS = col4 (set # = to a temp. variable)
-#             - IF [+] 
-#                 - IF CIGAR string (from ii) has an 'S' near the start (ex: 2S12M), SUBTRACT the # in front of the 'S' (2) from initial 'POS' #. 
-#             - IF [-] 
-#                 - ADD M,D,N,&(right-most ONLY)S to initial 'POS'#. 
-#         V. Extract ~CHROM~ 
-#             - RNAME = col3 (RNAME)
-
-#         * Populating set with unique keys only (& writing only unique reads to output SAM file)
-#         VI. Check if UMI is valid 
-#             -  If UMI is in list of known barcodes (STL96.txt), proceed to next steps 
-#             - If UMI is NOT in list of known barcodes, discard read (break & move onto next line, does not get written into output)
-#             - High-lvl Fxn: **validate_umi()**
 #         VII. Create a 'key' using ~UMI~,~POS~, ~STRAND~, & ~CHROM~
 #             - key can be a tuple (UMI, POS, STRAND, CHROM)
 #             - High-lvl Fxn: **populate_key()**

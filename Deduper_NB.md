@@ -325,8 +325,26 @@ samtools sort -o test_input_sorted.sam --output-fmt sam test_input.sam
 --> CURRENT TEST SAM FILE TO USE: /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/test_files/test_input_sorted.sam
 
 
-
 * I wrote all high-level functions into /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/Lai_deduper.py 
+```
+#Code Ran 
+./Lai_deduper.py -f "test_files/test_input.sam" -o "empty.sam" -u "STL96.txt"
+#Output 
+extract_umi() working properly
+validate_umi() working properly
+extract_strand() working properly 
+populate_key() working properly
+calc_pos() working properly
+```
+
+____________________________________
+10/31/24 -  P.3 -Deduper Code 
+____________________________________
+* Working on Code to Load File in /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/Lai_deduper.py
+    * ended on validate_umi(), next steps are to code 'VII. Create a 'key' using ~UMI~,~POS~, ~STRAND~, & ~CHROM~'
+    * NEXT, also need to test my code so far, I haven't been testing what I wrote so far. 
+
+
 
 
 
