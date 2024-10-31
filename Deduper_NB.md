@@ -304,9 +304,38 @@ samtools sort -n -o test_input_sorted.sam --output-fmt sam test_input.sam
 
 ```
 
+ERROR: 
+[W::sam_read1] Parse error at line 25
+samtools sort: truncated file. Aborting
+____________________________________
+10/30/24 -  P.3 -Deduper Code 
+____________________________________
+* Fixing my test .sam file : 
+    * /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/test_files/test_input.sam
+        * I am changing all chromosome values in CHR field from 'chr1'-->'1' to match the headers at the top (Leslie said my chromsome names do not match )
+
+* Reatempting samtools sort 
+```
+cd /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/test_files
+conda activate bgmp_samtools
+#sorting 
+samtools sort -o test_input_sorted.sam --output-fmt sam test_input.sam
+```
+* It finally sorted correctly!
+--> CURRENT TEST SAM FILE TO USE: /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/test_files/test_input_sorted.sam
+
+
+
+* I wrote all high-level functions into /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/Lai_deduper.py 
+
+
+
+
 
 
 TO DO: 
+* Edit script (as your issues suggested) to use sets instead of tuples (ppl were against the idea of a "key" to avoid time consumption)
+    https://github.com/klai22/Deduper-klai22/issues
 * Create a .sh script that will get metrics such as GB used by Lai_deduper.py & also includes steps like 'samtools sort'-ing the files before hand. 
 ________________________
 
@@ -316,3 +345,7 @@ ________________________
 $ conda create --name QAA
 $ conda activate QAA
 $ conda install bioconda::fastqc
+
+
+# SAM STRUCTRURE REMINDER: 
+QNAME FLAG RNAME POS MAPQ CIGAR RNEXT PNEXT TLEN SEQ QUAL
