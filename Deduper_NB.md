@@ -344,26 +344,116 @@ ____________________________________
     * ended on validate_umi(), next steps are to code 'VII. Create a 'key' using ~UMI~,~POS~, ~STRAND~, & ~CHROM~'
     * NEXT, also need to test my code so far, I haven't been testing what I wrote so far. 
 
+____________________________________
+11/04/24 -  P.3 -Deduper Code 
+____________________________________
+* Working from ''VII. Create a 'key' using ~UMI~,~POS~, ~STRAND~, & ~CHROM~' in /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/Lai_deduper.py
+    * tested code on test_files/ using....
+    ```
+    #Input Code: 
+    ./Lai_deduper.py -f "test_files/test_input_sorted.sam" -o1 "test_files/filtered_sorted.sam" -o2 "test_files/PCR_dups.tsv" -o3 "test_files/removed_reads.tsv" -o4 "test_files/chr_data.tsv" -u "STL96.txt"
+    ```
+    ```
+    #Output: 
+    Header Lines:24
+    Unique Reads:2
+    Wrong UMIs:2
+    Duplicates Removed:17
+    Total Reads Processed:19
+    extract_umi() working properly
+    validate_umi() working properly
+    extract_strand() working properly 
+    populate_key() working properly
+    calc_pos() working properly
+    ```
+
+* Writing .sh script: get metrics such as GB used by Lai_deduper.py & also includes steps like 'samtools sort'-ing the files before hand. 
+    * Including the following in the .sh script 
+    ```
+    cd /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/test_files
+    conda activate bgmp_samtools
+    #sorting 
+    samtools sort -o test_input_sorted.sam --output-fmt sam test_input.sam
+    ```
+```
+nano Lai_deduper.sh 
+mkdir o_e_files
+```
+* Made new directory to store official outputs of the deduper job. 
+    * /home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/Dedup_Outputs
+```
+mkdir Dedup_Outputs
+```
+
+* I realized that the assigment does not want me to include additional arg.parse options, so I copied the old version of .sh & .py scripts (deduper) and placed them into "/home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/Old_Scripts", edited original versions 
+"./<your_last_name>_deduper.py -u STL96.txt -f <in.sam> -o <out.sam>"
+
+* Since the arg.parse had to be removed for my additional file sorting, CREATING table_of_contents.md for my scripts to describe the additional outputs of Lai_deduper.py! 
+```
+#./Lai_deduper.py -f "test_files/test_input_sorted.sam" -o1 "test_files/filtered_sorted.sam" -o2 "test_files/PCR_dups.tsv" -o3 "test_files/removed_reads.tsv" -o4 "test_files/chr_data.tsv" -u "STL96.txt"
+
+def get_args():
+    parser = argparse.ArgumentParser(description="Deduper script to remove PCR duplicates from a SAM file. This code assumes (1) a sorted sam file & (2) single-end reads only/ not paired-end")
+    parser.add_argument("-f", required=True, help="Absolute path to INPUT sorted .sam (pre-dedup.)") 
+    parser.add_argument("-o1", required=True, help="Absolute path to OUTPUT sorted .sam (post-dedup.)")
+    parser.add_argument("-o2", required=True, help="Absolute path to OUTPUT aligned reads that were identified as PCR Duplicates")
+    parser.add_argument("-o3", required=True, help="Absolute path to OUTPUT aligned reads that were removed for reasons besides PCR duplication (such as invalid UMIs)")    
+    parser.add_argument("-o4", required=True, help="Absolute path to OUTPUT reporting read count per CHR")
+    parser.add_argument("-u", required=True, help="Absolute path to .txt of known UMIs")
+    return parser.parse_args()
+
+#setting input args--> variables 
+args=get_args()
+input_sam_file=args.f
+output_sam_file=args.o1
+PCR_duplicates_file=args.o2
+removed_reads_file=args.o3
+chr_read_counts_file=args.o4
+known_umis_file=args.u
+```
 
 
 
+* Attempting to run Lai_deduper.sh on /projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam
+```
+sbatch Lai_deduper.sh "STL96.txt" "/projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam" "Dedup_Outputs/filtered_sorted.sam" 
+```
 
+JOB TRACKER: 
+| JobID | Run Time(mm:ss) | CPU Usage (%)| Max. Res. Set Size (KB) | Max. RSS (GB), [ 1GB / 1,048,576 KB] | Exit Status | ERROR / Details | 
+|---|---|---|---|---|---|---|
+|23113497|26.53|261|NA|NA|1|FileNotFoundError: [Errno 2] No such file or directory: '/home/kenlai/bgmp/bioinfo/Bi624/Assignments/Deduper-klai22/Dedup_Outputs/sorted_input.sam '. I think it is bc my .sh script put a SPACE after sorted_input.sam. Deleted SPACE, trying again | 
+|23113500|138.17|148|NA|NA|1|line 194, CHR = int(fields[2]) ValueError: invalid literal for int() with base 10: 'MT'. CHANGED CHR = int(fields[2]) --> CHR = fields[2] so that it could be recognized as a string instead| 
+|23113506|142.63|143|NA|NA|0|NA? Weird Stats:Header Lines:64,Unique Reads:0,Wrong UMIs:0,Duplicates Removed:18186410,Total Reads Processed:18186410|
+|23113528|148.90|150|NA|NA|0|NA? Weird Stats:Header Lines:64,Unique Reads:0,Wrong UMIs:0,Duplicates Removed:18186410,Total Reads Processed:18186410, changed unique reads to be a counter of things that were written into output sam, and not just a generic calc. |
+|23113537|168.21|154|NA|NA|0|Header Lines:64, Unique Reads:13719048(including 1st occurance of duplicates), Wrong UMIs:0, Duplicates Removed:18186410, Total Reads Processed:18186410 --> noticed an extra indent in my duplicates' counters, removed the extra indent|
+|23113544|152.45|155|NA|NA|0|Header Lines:64, Unique Reads:13719048(including 1st occurance of duplicates), Wrong UMIs:0, Duplicates Removed:18186410, Total Reads Processed:18186410|
+|23113551|---|---|NA|NA|---| this one was just to make sure the sets were holding unique keys, and not the same one over and over again, to fix previous issues (total reads = reads rem.), I changed the sorting statement to if, else, instead of 2 if statements. | 
+|23113571|138.12|156|6657756|6.35|0|Header Lines:64, Unique Reads:13719048(including 1st occurance of duplicates), Wrong UMIs:0, Duplicates Removed:4467362, Total Reads Processed:18186410|
 
+CURRENT METRICS (Survey): - job 23113571
+Header Lines:64
+Unique Reads:13719048(including 1st occurance of duplicates)
+Wrong UMIs:0
+Duplicates Removed:4467362
+Total Reads Processed:18186410
+
+Mem: 6657756KB --> 6.35 GB 
+Time: 138.12 s --> ~2:18 m:s
 
 
 TO DO: 
-* Edit script (as your issues suggested) to use sets instead of tuples (ppl were against the idea of a "key" to avoid time consumption)
-    https://github.com/klai22/Deduper-klai22/issues
-* Create a .sh script that will get metrics such as GB used by Lai_deduper.py & also includes steps like 'samtools sort'-ing the files before hand. 
+
+
+
 ________________________
 
-# template stuff 
-*  Createded a conda env called QAA  & installed FASTQC 
+# PERSONAL NOTES / TEMPLATES 
+*  Created a conda env called QAA  & installed FASTQC 
 ```
 $ conda create --name QAA
 $ conda activate QAA
 $ conda install bioconda::fastqc
-
 
 # SAM STRUCTRURE REMINDER: 
 QNAME FLAG RNAME POS MAPQ CIGAR RNEXT PNEXT TLEN SEQ QUAL

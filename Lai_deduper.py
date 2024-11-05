@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-#./sam_parse.py -sam_file ___
-
-#./Lai_deduper.py -f "test_files/test_input_sorted.sam" -o1 "filtered_sorted.sam" -o2 "PCR_dups.tsv" -o3 "removed_reads.tsv" -u "STL96.txt"
+#./Lai_deduper.py -u STL96.txt -f "input_sorted.sam" -o "filtered_sorted.sam"
 
 # MANAGING INPUTS 
 #setting get_args 
@@ -11,19 +9,19 @@ import argparse
 def get_args():
     parser = argparse.ArgumentParser(description="Deduper script to remove PCR duplicates from a SAM file. This code assumes (1) a sorted sam file & (2) single-end reads only/ not paired-end")
     parser.add_argument("-f", required=True, help="Absolute path to INPUT sorted .sam (pre-dedup.)") 
-    parser.add_argument("-o1", required=True, help="Absolute path to OUTPUT sorted .sam (post-dedup.)")
-    parser.add_argument("-o2", required=True, help="Absolute path to OUTPUT aligned reads that were identified as PCR Duplicates")
-    parser.add_argument("-o3", required=True, help="Absolute path to OUTPUT aligned reads that were removed for reasons besides PCR duplication (such as invalid UMIs)")    
+    parser.add_argument("-o", required=True, help="Absolute path to OUTPUT sorted .sam (post-dedup.)")
     parser.add_argument("-u", required=True, help="Absolute path to .txt of known UMIs")
     return parser.parse_args()
 
 #setting input args--> variables 
 args=get_args()
 input_sam_file=args.f
-output_sam_file=args.o1
-PCR_duplicates_file=args.o2
-removed_reads_file=args.o3
+output_sam_file=args.o
 known_umis_file=args.u
+
+PCR_duplicates_file="PCR_dups.tsv" #Absolute path to OUTPUT aligned reads that were identified as PCR Duplicates
+removed_reads_file="removed_reads.tsv" #Absolute path to OUTPUT aligned reads that were removed for reasons besides PCR duplication (such as invalid UMIs)
+chr_read_counts_file="chr_data.tsv" #Absolute path to OUTPUT reporting read count per CHR"
 
 #Importing modules
 # import gzip
@@ -83,9 +81,9 @@ Returns "+" if no rev_comp present in flag. Returns "-" if rev_comp detected in 
         return "+" #if F, then it is on FWD strand 
 
 # **populate_key()**
-def populate_key(UMI: str, POS: int,STRAND: str, CHROM: int)-> tuple:
+def populate_key(UMI: str, POS: int,STRAND: str)-> tuple:
     '''
-Compiles the 4 main variables of a given read line that we compare to determine if read is a PCR duplicate. 
+Compiles the 3 main variables of a given read line that we compare to determine if read is a PCR duplicate. 
 
 REQUIRES NA (no extra fxns from bioinfo.py module needed)
 
@@ -93,12 +91,12 @@ Input:
     UMI (string) - output of extract_umi()
     POS (int) - starting pos. of read (factoring in calc. for soft-clipping!)
     STRAND (str) - output of extract_strand()
-    CHROM (int) - RNAME value for given read line 
+    CHROM (int) - RNAME value for given read line, this part was removed bc CHR will already be accounted for when tracking sets of tuple keys
 Output:
     key (tuple) - a key to be conditionally encorperated into the initalized set (depending on whether or not duplicate exists)
 Returns a tuple of UMI, POS, STRAND, & CHROM for given read line. This tuple should be unique to the read if it is NOT a PCR duplicate. 
 '''
-    return (UMI,POS,STRAND,CHROM)
+    return (UMI,POS,STRAND)
 
 # **calc_pos()**
 def calc_pos(POS: int,STRAND: str, CIGAR: str)-> int:
@@ -153,29 +151,48 @@ Returns an integer of what the updated POS should be. THIS will be stored in the
 
 # DEDUP CODE 
 
+# 0. Initalizing Tracker Variables 
+header_lines_count=0
+wrong_UMIs_count=0
+total_reads_count=0 #total reads processed, later used in  unique_reads_count calc. 
+duplicates_removed_count=0
+CHR_tracker=0
+reads_per_chr_counter=0
+unique_reads_count=0
+#unique_reads_count = total_reads_processed - duplicates_removed_count
+
 # 1. Specify input arguments (input SAM file [sorted, mapped reads only], output SAM file) 
     #Completed Earlier 
-# 2. Create empty **set** to store  *unique* read "keys" (UMI,POS,CHROM,Strand)
+# 2. Create empty set to store unique read "keys" (UMI,POS,CHROM,Strand)
+seen_keys =  set()
+# 2.5 Create a set of known umis 
 #open the known umis file 
 with open(known_umis_file,"r") as file:
     # strip /n for every line in file, turn all into a set 
     known_umis = set(line.strip() for line in file)
 # 3. Open input SAM file (reading) & # 4. Open output SAM file (writing) 
-with open (input_sam_file,"r") as input_sam, open(output_sam_file, "w") as output_sam, open(PCR_duplicates_file, "w") as PCR_dups, open(removed_reads_file, "W") as removed_reads: 
+with open (input_sam_file,"r") as input_sam, open(output_sam_file, "w") as output_sam, open(PCR_duplicates_file, "w") as PCR_dups, open(removed_reads_file, "w") as removed_reads, open(chr_read_counts_file,"w") as chr_read_counts: 
     # 5. Iterate through EACH LINE of SAM file (to avoid loading everything into mem.)
         #- '~_~' indicates a temp_variable has been created to hold value for current line 
     for line in input_sam:
         #a. If ~line~ = header line (starts w/ '@'), write to ouput SAM file. 
         if line.startswith("@"):
             output_sam.write(line)
+            header_lines_count+=1
             continue #skips to next line, going back to start of for loop 
-        #b. If ~line~ = read line:
+        #b. If ~line~ = "" end fo file, stop forloop 
+        if line == "":
+            break
+        #c. If ~line~ = read line:
     #Extracting ingredients for read's unique key 
+        #keeping track/count of read lines processed 
+        reads_per_chr_counter+=1
+        total_reads_count+=1
         #breaking up line (fields) into multiple accessible components - tab-delimited 
-        fields = line.strip().split("/t")
+        fields = line.strip().split("\t")
         QNAME = fields[0]
         FLAG = int(fields[1])
-        CHR = int(fields[2])
+        CHR = fields[2]
         POS = int(fields[3])
         CIGAR = fields[5]
         #I. Extract ~UMI~ from QNAME column. (set # = to a temp. variable)
@@ -189,26 +206,47 @@ with open (input_sam_file,"r") as input_sam, open(output_sam_file, "w") as outpu
     #Populating set with unique keys only (& writing only unique reads to output SAM file)
         #VI. Check if UMI is valid
         if validate_umi(UMI, known_umis)==False:
+            wrong_UMIs_count+=1
             removed_reads.write(line) #write invalid umis into removed_reads file (read that were removed that weren't PCR duplicates)
             continue #move to next read line, going back to for loop again 
         # DONT NEED 'elif validate_umi(UMI, known_umis)==True:', script will know to proceed directly to next steps 
-
-
-#         VII. Create a 'key' using ~UMI~,~POS~, ~STRAND~, & ~CHROM~
-#             - key can be a tuple (UMI, POS, STRAND, CHROM)
-#             - High-lvl Fxn: **populate_key()**
-#         VIII. Conditionally populate set w/ keys 
-#             - If the key is NOT in the set....
-#                 1. add key to set!
-#                 2. write read line (~line~) to output SAM file!
-#             - If the key is ALREADY in the set...
-#                 - discard read (break, move onto next line, DO NOT add to set, DO NOT write into output)
+        
+        #VII. Resetting obj.s, Creating tuple 'keys', & Conditionally populate set w/ keys
+            # a. If the current line is for a new CHR, clear the sets (only holds reads per chr to save mem) & update chr variable 
+        if CHR != CHR_tracker:
+            chr_read_counts.write(f"{CHR_tracker}\t{reads_per_chr_counter-1}\n") #subtract 1 bc the current line was added already, but belonged to new CHR 
+            CHR_tracker=CHR
+            seen_keys = set()
+            reads_per_chr_counter = 1
+            #b. Create a tuple 'key' using ~UMI~,~POS~, & ~STRAND~ (don't include CHR in tuple key bc already accounted for by #VII.a)
+        key = populate_key(UMI, NEW_POS, STRAND) 
+            #c. Conditionally populate set w/ keys
+                #If the key is NOT in the set, 1. add key to set!, 2. write read line (~line~) to output SAM file!
+        if key not in seen_keys:
+            seen_keys.add(key)
+            unique_reads_count+=1
+            output_sam.write(line) #write unique read to output.sam file
+            continue 
+                #If the key is ALREADY in the set, discard read (break, move onto next line, DO NOT add to set, DO NOT write into output_SAM)
+        else: # if key in seen_keys:
+            PCR_dups.write(line)
+            duplicates_removed_count+=1
+            continue
 # 6. Close input & output SAM files. 
-# 7. exit 
+input_sam.close()
+output_sam.close()
+PCR_dups.close()
+removed_reads.close()
+chr_read_counts.close()
 
+# 7. Printing Deduping Stats & Exit 
+#unique_reads_count = total_reads_count - duplicates_removed_count
 
-
-
+print(f"Header Lines:{header_lines_count}")
+print(f"Unique Reads:{unique_reads_count}(including 1st occurance of duplicates)")
+print(f"Wrong UMIs:{wrong_UMIs_count}")
+print(f"Duplicates Removed:{duplicates_removed_count}")
+print(f"Total Reads Processed:{total_reads_count}")
 
 # UNIT TESTS 
 assert extract_umi("NS500451:154:HWKTMBGXX:1:11101:24260:1121:CTGTTCAC") == "CTGTTCAC", f"extract_umi() working properly"
@@ -224,8 +262,8 @@ assert extract_strand(99) =="+", f"extract_strand() failed"
 assert extract_strand(83) =="-", f"extract_strand() failed"
 assert extract_strand(163) =="+", f"extract_strand() failed"
 print("extract_strand() working properly ")
-unit_test_A=populate_key("TGAGTGAG",52159545, "+", 2)
-assert unit_test_A == ("TGAGTGAG",52159545, "+", 2), f"populate_key() failed"
+unit_test_A=populate_key("TGAGTGAG",52159545, "+")
+assert unit_test_A == ("TGAGTGAG",52159545, "+"), f"populate_key() failed"
 assert isinstance(unit_test_A, tuple) == True, f"populate_key() failed"
 print("populate_key() working properly")
 assert calc_pos(100,"+","4S10M") == 96,f"calc_pos() failed" #N 100-3
